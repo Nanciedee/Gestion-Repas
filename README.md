@@ -38,4 +38,4 @@ Bienvenue dans mon système personnel de gestion des repas ! Cette application m
 - [ ] Salade (expire le: XX/XX/XXXX)
 - [ ] Yaourt (expire le: XX/XX/XXXX)
 
-*Dernière mise à jour : [Date d'aujourd'hui]*
+*Dernière mise à jour : 6 août 2025*

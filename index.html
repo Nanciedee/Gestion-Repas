@@ -348,7 +348,12 @@
                         <!-- Le contenu sera généré par JavaScript -->
                     </tbody>
                 </table>
-                <button class="btn btn-success" onclick="openModal('planning-modal')">✏️ Modifier Planning</button>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
+                    <button class="btn btn-success" onclick="openModal('planning-modal')">✏️ Modifier Planning</button>
+                    <button class="btn btn-warning" onclick="openRecipeApp()" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);">
+                        🍳 Chercher Recettes
+                    </button>
+                </div>
             </div>
 
             <!-- Aliments Prioritaires -->
@@ -755,6 +760,11 @@
             if (recipes.length === 0) {
                 container.innerHTML = '<p style="text-align: center; color: #666; margin: 20px 0;">Aucune recette enregistrée</p>';
             }
+        }
+
+        // Fonction pour ouvrir l'application de recettes
+        function openRecipeApp() {
+            window.open('https://nanciedee.github.io/Recette2moi/', '_blank', 'noopener,noreferrer');
         }
 
         // Nouvelles fonctions utilitaires

@@ -296,30 +296,7 @@
                         </tr>
                     </thead>
                     <tbody id="planning-tbody">
-                        <tr>
-                            <td><strong>Lundi</strong></td>
-                            <td>Œufs brouillés</td>
-                            <td>Salade poulet</td>
-                            <td>Pâtes bolognaise</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Mardi</strong></td>
-                            <td>Gruau instantané</td>
-                            <td>Sandwich jambon</td>
-                            <td>Tacos familiaux</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Mercredi</strong></td>
-                            <td>Céréales</td>
-                            <td>Soupe + sandwich</td>
-                            <td>Pizza maison</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Jeudi</strong></td>
-                            <td>Toast beurre d'arachide</td>
-                            <td>Salade saumon</td>
-                            <td>Saucisses + légumes</td>
-                        </tr>
+                        <!-- Le contenu sera généré par JavaScript -->
                     </tbody>
                 </table>
                 <button class="btn btn-success" onclick="openModal('planning-modal')">✏️ Modifier Planning</button>
@@ -382,13 +359,13 @@
                 <div class="form-group">
                     <label>Jour:</label>
                     <select id="day-select">
-                        <option>Lundi</option>
-                        <option>Mardi</option>
-                        <option>Mercredi</option>
-                        <option>Jeudi</option>
-                        <option>Vendredi</option>
-                        <option>Samedi</option>
-                        <option>Dimanche</option>
+                        <option value="Lundi">Lundi</option>
+                        <option value="Mardi">Mardi</option>
+                        <option value="Mercredi">Mercredi</option>
+                        <option value="Jeudi">Jeudi</option>
+                        <option value="Vendredi">Vendredi</option>
+                        <option value="Samedi">Samedi</option>
+                        <option value="Dimanche">Dimanche</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -498,19 +475,104 @@
             {name: 'Tacos Familiaux', prepTime: 15, cookTime: 10, portions: 3, ingredients: ['3 galettes bœuf', '5 coquilles tacos', 'Salade', 'Tomate'], instructions: ['Réchauffer bœuf', 'Préparer légumes', 'Assembler']}
         ];
 
+        // Planning hebdomadaire - structure de données
+        let weeklyPlanning = {
+            'Lundi': {
+                breakfast: 'Œufs brouillés',
+                lunch: 'Salade poulet',
+                dinner: 'Pâtes bolognaise'
+            },
+            'Mardi': {
+                breakfast: 'Gruau instantané',
+                lunch: 'Sandwich jambon',
+                dinner: 'Tacos familiaux'
+            },
+            'Mercredi': {
+                breakfast: 'Céréales',
+                lunch: 'Soupe + sandwich',
+                dinner: 'Pizza maison'
+            },
+            'Jeudi': {
+                breakfast: 'Toast beurre d\'arachide',
+                lunch: 'Salade saumon',
+                dinner: 'Saucisses + légumes'
+            },
+            'Vendredi': {
+                breakfast: 'Smoothie',
+                lunch: 'Reste pizza',
+                dinner: 'Poisson grillé'
+            },
+            'Samedi': {
+                breakfast: 'Pancakes',
+                lunch: 'Brunch familial',
+                dinner: 'BBQ'
+            },
+            'Dimanche': {
+                breakfast: 'Brunch tardif',
+                lunch: 'Salade composée',
+                dinner: 'Repas préparé'
+            }
+        };
+
+        // Fonction pour afficher le planning dans le tableau
+        function displayPlanning() {
+            const tbody = document.getElementById('planning-tbody');
+            tbody.innerHTML = '';
+
+            Object.keys(weeklyPlanning).forEach(day => {
+                const row = document.createElement('tr');
+                const dayPlan = weeklyPlanning[day];
+                
+                row.innerHTML = `
+                    <td><strong>${day}</strong></td>
+                    <td>${dayPlan.breakfast}</td>
+                    <td>${dayPlan.lunch}</td>
+                    <td>${dayPlan.dinner}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
         // Fonctions d'interface
         function showSection(section) {
-            // Cette fonction pourrait être utilisée pour naviguer entre différentes vues
             console.log('Affichage de la section:', section);
         }
 
         function openModal(modalId) {
             document.getElementById(modalId).style.display = 'block';
+            
+            // Si on ouvre le modal de planning, pré-remplir les champs avec les données actuelles
+            if (modalId === 'planning-modal') {
+                const daySelect = document.getElementById('day-select');
+                const currentDay = daySelect.value;
+                loadPlanningForDay(currentDay);
+            }
         }
 
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
         }
+
+        // Fonction pour charger les données d'un jour spécifique dans le formulaire
+        function loadPlanningForDay(day) {
+            const dayPlan = weeklyPlanning[day];
+            if (dayPlan) {
+                document.getElementById('breakfast').value = dayPlan.breakfast || '';
+                document.getElementById('lunch').value = dayPlan.lunch || '';
+                document.getElementById('dinner').value = dayPlan.dinner || '';
+            }
+        }
+
+        // Écouteur pour le changement de jour dans le modal
+        document.addEventListener('DOMContentLoaded', function() {
+            const daySelect = document.getElementById('day-select');
+            if (daySelect) {
+                daySelect.addEventListener('change', function() {
+                    loadPlanningForDay(this.value);
+                });
+            }
+        });
 
         function updatePriority(itemId) {
             const checkbox = document.getElementById(itemId);
@@ -525,13 +587,24 @@
             }
         }
 
+        // Fonction corrigée pour sauvegarder le planning
         function savePlanning() {
             const day = document.getElementById('day-select').value;
             const breakfast = document.getElementById('breakfast').value;
             const lunch = document.getElementById('lunch').value;
             const dinner = document.getElementById('dinner').value;
 
-            alert(`Planning sauvegardé pour ${day}:\nPetit-déjeuner: ${breakfast}\nLunch: ${lunch}\nDîner: ${dinner}`);
+            // Mettre à jour les données
+            weeklyPlanning[day] = {
+                breakfast: breakfast || 'Non défini',
+                lunch: lunch || 'Non défini',
+                dinner: dinner || 'Non défini'
+            };
+
+            // Rafraîchir l'affichage du tableau
+            displayPlanning();
+
+            alert(`Planning sauvegardé pour ${day} !`);
             closeModal('planning-modal');
         }
 
@@ -616,7 +689,6 @@
         }
 
         function updatePriorityDisplay() {
-            // Cette fonction pourrait mettre à jour l'affichage des priorités
             console.log('Mise à jour des priorités');
         }
 
@@ -627,9 +699,10 @@
             }
         }
 
-        // Initialisation
+        // Initialisation - Afficher le planning au chargement
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Application de gestion de repas chargée !');
+            displayPlanning();
         });
     </script>
 </body>

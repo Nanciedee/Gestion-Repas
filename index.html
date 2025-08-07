@@ -105,6 +105,20 @@
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         }
         
+        .btn.active {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .section {
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
         .planning-table {
             width: 100%;
             border-collapse: collapse;
@@ -310,14 +324,14 @@
 
         <!-- Navigation -->
         <div class="navigation">
-            <button class="btn btn-info" onclick="showSection('planning')">📅 Planning</button>
-            <button class="btn btn-success" onclick="showSection('inventory')">📦 Inventaire</button>
-            <button class="btn btn-warning" onclick="showSection('recipes')">🍳 Recettes</button>
-            <button class="btn" onclick="showSection('shopping')">🛒 Épicerie</button>
+            <button class="btn btn-info active" id="btn-planning" onclick="showSection('planning')">📅 Planning</button>
+            <button class="btn btn-success" id="btn-inventory" onclick="showSection('inventory')">📦 Inventaire</button>
+            <button class="btn btn-warning" id="btn-recipes" onclick="showSection('recipes')">🍳 Recettes</button>
+            <button class="btn" id="btn-shopping" onclick="showSection('shopping')">🛒 Épicerie</button>
         </div>
 
         <!-- Dashboard -->
-        <div class="dashboard">
+        <div class="dashboard section active" id="section-planning">
             <!-- Planning Hebdomadaire -->
             <div class="card" id="planning-card">
                 <h2>📅 Planning de la Semaine</h2>
@@ -379,6 +393,80 @@
                     <div class="stat-card">
                         <div class="stat-number">340$</div>
                         <div>Économies réalisées</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Inventaire -->
+        <div class="section" id="section-inventory">
+            <div class="dashboard">
+                <div class="card" style="grid-column: span 2;">
+                    <h2>📦 Inventaire Complet</h2>
+                    <table class="planning-table">
+                        <thead>
+                            <tr>
+                                <th>Aliment</th>
+                                <th>Quantité</th>
+                                <th>Date d'expiration</th>
+                                <th>Catégorie</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-tbody">
+                            <!-- Généré par JavaScript -->
+                        </tbody>
+                    </table>
+                    <button class="btn btn-success" onclick="openModal('inventory-modal')">➕ Ajouter Aliment</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Recettes -->
+        <div class="section" id="section-recipes">
+            <div class="dashboard">
+                <div class="card" style="grid-column: span 2;">
+                    <h2>🍳 Mes Recettes</h2>
+                    <div id="recipes-container">
+                        <!-- Généré par JavaScript -->
+                    </div>
+                    <button class="btn btn-success" onclick="openModal('recipe-modal')">➕ Nouvelle Recette</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Épicerie -->
+        <div class="section" id="section-shopping">
+            <div class="dashboard">
+                <div class="card">
+                    <h2>🛒 Liste d'Épicerie</h2>
+                    <div id="shopping-list">
+                        <div class="priority-item priority-urgent">
+                            <input type="checkbox" class="checkbox">
+                            <label><strong>Lait</strong> - Stock critique</label>
+                        </div>
+                        <div class="priority-item priority-warning">
+                            <input type="checkbox" class="checkbox">
+                            <label><strong>Œufs</strong> - Stock bas</label>
+                        </div>
+                        <div class="priority-item priority-normal">
+                            <input type="checkbox" class="checkbox">
+                            <label><strong>Pain</strong> - Prévu planning</label>
+                        </div>
+                    </div>
+                    <button class="btn btn-warning" onclick="generateShoppingList()">🔄 Régénérer</button>
+                </div>
+                <div class="card">
+                    <h2>💰 Budget & Historique</h2>
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-number">75$</div>
+                            <div>Budget semaine</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">12</div>
+                            <div>Articles listés</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -570,8 +658,118 @@
         }
 
         // Fonctions d'interface
-        function showSection(section) {
-            console.log('Affichage de la section:', section);
+        function showSection(sectionName) {
+            // Masquer toutes les sections
+            const sections = document.querySelectorAll('.section');
+            sections.forEach(section => section.classList.remove('active'));
+            
+            // Désactiver tous les boutons
+            const buttons = document.querySelectorAll('.navigation .btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            // Afficher la section demandée
+            const targetSection = document.getElementById(`section-${sectionName}`);
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
+            
+            // Activer le bouton correspondant
+            const activeButton = document.getElementById(`btn-${sectionName}`);
+            if (activeButton) {
+                activeButton.classList.add('active');
+            }
+            
+            // Actions spécifiques selon la section
+            switch(sectionName) {
+                case 'inventory':
+                    displayInventory();
+                    break;
+                case 'recipes':
+                    displayRecipes();
+                    break;
+                case 'planning':
+                    displayPlanning();
+                    break;
+            }
+        }
+
+        // Fonction pour afficher l'inventaire
+        function displayInventory() {
+            const tbody = document.getElementById('inventory-tbody');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            inventory.forEach((item, index) => {
+                const row = document.createElement('tr');
+                const expiryDate = new Date(item.expiry);
+                const today = new Date();
+                const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+                
+                let priorityClass = 'priority-normal';
+                if (daysUntilExpiry <= 2) priorityClass = 'priority-urgent';
+                else if (daysUntilExpiry <= 5) priorityClass = 'priority-warning';
+                
+                row.innerHTML = `
+                    <td><strong>${item.name}</strong></td>
+                    <td>${item.quantity} ${item.unit}</td>
+                    <td class="${priorityClass}">${item.expiry} (${daysUntilExpiry}j)</td>
+                    <td>${item.category}</td>
+                    <td><button class="btn" onclick="removeFromInventory(${index})" style="padding: 5px 10px; font-size: 0.8rem;">🗑️</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Fonction pour afficher les recettes
+        function displayRecipes() {
+            const container = document.getElementById('recipes-container');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            recipes.forEach((recipe, index) => {
+                const recipeCard = document.createElement('div');
+                recipeCard.className = 'priority-item priority-normal';
+                recipeCard.style.flexDirection = 'column';
+                recipeCard.style.alignItems = 'flex-start';
+                recipeCard.style.marginBottom = '15px';
+                
+                recipeCard.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                        <h3 style="margin: 0; color: #2c3e50;">${recipe.name}</h3>
+                        <button class="btn" onclick="removeRecipe(${index})" style="padding: 5px 10px; font-size: 0.8rem;">🗑️</button>
+                    </div>
+                    <p style="margin: 5px 0; color: #666;">⏱️ ${recipe.prepTime} min • 🍽️ ${recipe.portions} portions</p>
+                    <details style="margin-top: 10px; width: 100%;">
+                        <summary style="cursor: pointer; font-weight: bold; color: #667eea;">Voir détails</summary>
+                        <div style="margin-top: 10px;">
+                            <strong>Ingrédients:</strong>
+                            <ul style="margin: 5px 0;">${recipe.ingredients.map(ing => `<li>${ing}</li>`).join('')}</ul>
+                            <strong>Instructions:</strong>
+                            <ol style="margin: 5px 0;">${recipe.instructions.map(inst => `<li>${inst}</li>`).join('')}</ol>
+                        </div>
+                    </details>
+                `;
+                container.appendChild(recipeCard);
+            });
+            
+            if (recipes.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666; margin: 20px 0;">Aucune recette enregistrée</p>';
+            }
+        }
+
+        // Nouvelles fonctions utilitaires
+        function removeFromInventory(index) {
+            if (confirm('Supprimer cet aliment de l\'inventaire ?')) {
+                inventory.splice(index, 1);
+                displayInventory();
+            }
+        }
+
+        function removeRecipe(index) {
+            if (confirm('Supprimer cette recette ?')) {
+                recipes.splice(index, 1);
+                displayRecipes();
+            }
         }
 
         function openModal(modalId) {

@@ -374,13 +374,19 @@
                 <button class="btn btn-info" onclick="showInventory()">📦 Voir Tout l'Inventaire</button>
             </div>
 
-            <!-- Actions Rapides -->
-            <div class="card">
+                <div class="card">
                 <h2>⚡ Actions Rapides</h2>
                 <button class="btn btn-success" onclick="openModal('recipe-modal')">➕ Nouvelle Recette</button>
                 <button class="btn btn-warning" onclick="generateShoppingList()">🛒 Générer Liste Épicerie</button>
                 <button class="btn btn-info" onclick="openModal('inventory-modal')">📦 Ajouter Aliment</button>
                 <button class="btn" onclick="showStats()">📊 Voir Statistiques</button>
+                <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
+                    <h3 style="color: #2c3e50; margin-bottom: 10px; font-size: 1rem;">📁 Sauvegarde & Restauration</h3>
+                    <button class="btn" onclick="exportToExcel()" style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);">📤 Exporter Excel</button>
+                    <input type="file" id="import-file" accept=".xlsx,.xls" style="display: none;" onchange="importFromExcel(event)">
+                    <button class="btn" onclick="document.getElementById('import-file').click()" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);">📥 Importer Excel</button>
+                    <button class="btn" onclick="resetToDefault()" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">🔄 Réinitialiser</button>
+                </div>
             </div>
 
             <!-- Statistiques -->
@@ -589,22 +595,27 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
         // Variables globales
         let currentSection = 'dashboard';
-        let inventory = [
+        let inventory = [];
+        let recipes = [];
+        let weeklyPlanning = {};
+
+        // Données par défaut
+        const defaultInventory = [
             {name: 'Lait', quantity: 1, unit: 'L', expiry: '2025-08-08', category: 'Produits laitiers'},
             {name: 'Yaourt', quantity: 4, unit: 'pots', expiry: '2025-08-10', category: 'Produits laitiers'},
             {name: 'Salade iceberg', quantity: 1, unit: 'unité', expiry: '2025-08-12', category: 'Légumes'}
         ];
 
-        let recipes = [
+        const defaultRecipes = [
             {name: 'Pâtes Bolognaise', prepTime: 10, cookTime: 15, portions: 4, ingredients: ['400g pâtes', '1 sauce bolognaise', '100g fromage'], instructions: ['Cuire pâtes', 'Réchauffer sauce', 'Mélanger']},
             {name: 'Tacos Familiaux', prepTime: 15, cookTime: 10, portions: 3, ingredients: ['3 galettes bœuf', '5 coquilles tacos', 'Salade', 'Tomate'], instructions: ['Réchauffer bœuf', 'Préparer légumes', 'Assembler']}
         ];
 
-        // Planning hebdomadaire - structure de données
-        let weeklyPlanning = {
+        const defaultWeeklyPlanning = {
             'Lundi': {
                 breakfast: 'Œufs brouillés',
                 lunch: 'Salade poulet',
@@ -641,6 +652,242 @@
                 dinner: 'Repas préparé'
             }
         };
+
+        // Fonctions de sauvegarde et chargement
+        function saveToLocalStorage() {
+            try {
+                const data = {
+                    inventory: inventory,
+                    recipes: recipes,
+                    weeklyPlanning: weeklyPlanning,
+                    lastUpdate: new Date().toISOString()
+                };
+                localStorage.setItem('mealPlannerData', JSON.stringify(data));
+                console.log('✅ Données sauvegardées automatiquement');
+            } catch (error) {
+                console.error('❌ Erreur lors de la sauvegarde:', error);
+            }
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const saved = localStorage.getItem('mealPlannerData');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    inventory = data.inventory || defaultInventory;
+                    recipes = data.recipes || defaultRecipes;
+                    weeklyPlanning = data.weeklyPlanning || defaultWeeklyPlanning;
+                    console.log('✅ Données chargées depuis la sauvegarde');
+                    return true;
+                } else {
+                    // Première visite, utiliser les données par défaut
+                    inventory = [...defaultInventory];
+                    recipes = [...defaultRecipes];
+                    weeklyPlanning = {...defaultWeeklyPlanning};
+                    console.log('🆕 Première visite, utilisation des données par défaut');
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Erreur lors du chargement:', error);
+                // En cas d'erreur, utiliser les données par défaut
+                inventory = [...defaultInventory];
+                recipes = [...defaultRecipes];
+                weeklyPlanning = {...defaultWeeklyPlanning};
+                return false;
+            }
+        }
+
+        // Fonctions d'export/import Excel
+        function exportToExcel() {
+            try {
+                // Créer un nouveau classeur Excel
+                const wb = XLSX.utils.book_new();
+                
+                // Feuille 1: Planning hebdomadaire
+                const planningData = [];
+                planningData.push(['Jour', 'Petit-déjeuner', 'Lunch', 'Dîner']);
+                Object.keys(weeklyPlanning).forEach(day => {
+                    const dayPlan = weeklyPlanning[day];
+                    planningData.push([
+                        day,
+                        dayPlan.breakfast || '',
+                        dayPlan.lunch || '',
+                        dayPlan.dinner || ''
+                    ]);
+                });
+                const planningWS = XLSX.utils.aoa_to_sheet(planningData);
+                XLSX.utils.book_append_sheet(wb, planningWS, "Planning");
+
+                // Feuille 2: Inventaire
+                const inventoryData = [];
+                inventoryData.push(['Nom', 'Quantité', 'Unité', 'Date expiration', 'Catégorie']);
+                inventory.forEach(item => {
+                    inventoryData.push([
+                        item.name,
+                        item.quantity,
+                        item.unit,
+                        item.expiry,
+                        item.category
+                    ]);
+                });
+                const inventoryWS = XLSX.utils.aoa_to_sheet(inventoryData);
+                XLSX.utils.book_append_sheet(wb, inventoryWS, "Inventaire");
+
+                // Feuille 3: Recettes
+                const recipesData = [];
+                recipesData.push(['Nom', 'Temps préparation (min)', 'Portions', 'Ingrédients', 'Instructions']);
+                recipes.forEach(recipe => {
+                    recipesData.push([
+                        recipe.name,
+                        recipe.prepTime,
+                        recipe.portions,
+                        recipe.ingredients.join(' | '),
+                        recipe.instructions.join(' | ')
+                    ]);
+                });
+                const recipesWS = XLSX.utils.aoa_to_sheet(recipesData);
+                XLSX.utils.book_append_sheet(wb, recipesWS, "Recettes");
+
+                // Feuille 4: Informations de sauvegarde
+                const infoData = [
+                    ['Information', 'Valeur'],
+                    ['Date de sauvegarde', new Date().toLocaleString('fr-CA')],
+                    ['Nombre de recettes', recipes.length],
+                    ['Nombre d\'aliments', inventory.length],
+                    ['Version application', '2.0'],
+                    ['', ''],
+                    ['Instructions:', ''],
+                    ['', 'Pour restaurer vos données:'],
+                    ['', '1. Ouvrez votre planificateur de repas'],
+                    ['', '2. Cliquez sur "Importer Excel"'],
+                    ['', '3. Sélectionnez ce fichier'],
+                    ['', '4. Vos données seront restaurées automatiquement']
+                ];
+                const infoWS = XLSX.utils.aoa_to_sheet(infoData);
+                XLSX.utils.book_append_sheet(wb, infoWS, "Info Sauvegarde");
+
+                // Télécharger le fichier
+                const today = new Date().toISOString().split('T')[0];
+                const filename = `Planificateur_Repas_Sauvegarde_${today}.xlsx`;
+                XLSX.writeFile(wb, filename);
+
+                alert(`✅ Sauvegarde Excel créée avec succès !\n\nFichier téléchargé: ${filename}\n\n📋 Contient:\n• Planning hebdomadaire\n• Inventaire complet\n• Toutes vos recettes\n• Instructions de restauration`);
+            } catch (error) {
+                console.error('Erreur lors de l\'export Excel:', error);
+                alert('❌ Erreur lors de la création du fichier Excel. Veuillez réessayer.');
+            }
+        }
+
+        function importFromExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+
+                    let importedData = {
+                        planning: {},
+                        inventory: [],
+                        recipes: []
+                    };
+
+                    // Lire le planning
+                    if (workbook.SheetNames.includes('Planning')) {
+                        const planningSheet = workbook.Sheets['Planning'];
+                        const planningJson = XLSX.utils.sheet_to_json(planningSheet, {header: 1});
+                        
+                        for (let i = 1; i < planningJson.length; i++) {
+                            const row = planningJson[i];
+                            if (row[0]) {
+                                importedData.planning[row[0]] = {
+                                    breakfast: row[1] || '',
+                                    lunch: row[2] || '',
+                                    dinner: row[3] || ''
+                                };
+                            }
+                        }
+                    }
+
+                    // Lire l'inventaire
+                    if (workbook.SheetNames.includes('Inventaire')) {
+                        const inventorySheet = workbook.Sheets['Inventaire'];
+                        const inventoryJson = XLSX.utils.sheet_to_json(inventorySheet, {header: 1});
+                        
+                        for (let i = 1; i < inventoryJson.length; i++) {
+                            const row = inventoryJson[i];
+                            if (row[0]) {
+                                importedData.inventory.push({
+                                    name: row[0],
+                                    quantity: row[1] || 1,
+                                    unit: row[2] || 'unité',
+                                    expiry: row[3] || '',
+                                    category: row[4] || 'Autre'
+                                });
+                            }
+                        }
+                    }
+
+                    // Lire les recettes
+                    if (workbook.SheetNames.includes('Recettes')) {
+                        const recipesSheet = workbook.Sheets['Recettes'];
+                        const recipesJson = XLSX.utils.sheet_to_json(recipesSheet, {header: 1});
+                        
+                        for (let i = 1; i < recipesJson.length; i++) {
+                            const row = recipesJson[i];
+                            if (row[0]) {
+                                importedData.recipes.push({
+                                    name: row[0],
+                                    prepTime: row[1] || 15,
+                                    portions: row[2] || 4,
+                                    ingredients: row[3] ? row[3].split(' | ') : [],
+                                    instructions: row[4] ? row[4].split(' | ') : []
+                                });
+                            }
+                        }
+                    }
+
+                    // Demander confirmation avant d'importer
+                    const confirmMessage = `🔍 APERÇU DE L'IMPORTATION\n\n` +
+                        `📅 Planning: ${Object.keys(importedData.planning).length} jours\n` +
+                        `📦 Inventaire: ${importedData.inventory.length} aliments\n` +
+                        `🍳 Recettes: ${importedData.recipes.length} recettes\n\n` +
+                        `⚠️ Cette action remplacera toutes vos données actuelles.\n` +
+                        `Voulez-vous continuer ?`;
+
+                    if (confirm(confirmMessage)) {
+                        // Remplacer les données
+                        if (Object.keys(importedData.planning).length > 0) {
+                            weeklyPlanning = importedData.planning;
+                        }
+                        if (importedData.inventory.length > 0) {
+                            inventory = importedData.inventory;
+                        }
+                        if (importedData.recipes.length > 0) {
+                            recipes = importedData.recipes;
+                        }
+
+                        // Sauvegarder et rafraîchir l'affichage
+                        saveToLocalStorage();
+                        displayPlanning();
+                        displayInventory();
+                        displayRecipes();
+
+                        alert('✅ Import terminé avec succès !\n\nToutes vos données ont été restaurées.');
+                    }
+
+                } catch (error) {
+                    console.error('Erreur lors de l\'import Excel:', error);
+                    alert('❌ Erreur lors de la lecture du fichier Excel.\n\nAssurez-vous que le fichier provient bien d\'une sauvegarde de cette application.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+            
+            // Réinitialiser l'input file
+            event.target.value = '';
+        }
 
         // Fonction pour afficher le planning dans le tableau
         function displayPlanning() {
@@ -762,7 +1009,18 @@
             }
         }
 
-        // Fonction pour ouvrir l'application de recettes
+        function resetToDefault() {
+            if (confirm('⚠️ Êtes-vous sûr de vouloir réinitialiser toutes vos données ? Cette action est irréversible.')) {
+                inventory = [...defaultInventory];
+                recipes = [...defaultRecipes];
+                weeklyPlanning = {...defaultWeeklyPlanning};
+                saveToLocalStorage();
+                displayPlanning();
+                displayInventory();
+                displayRecipes();
+                alert('🔄 Données réinitialisées avec succès !');
+            }
+        }
         function openRecipeApp() {
             window.open('https://nanciedee.github.io/Recette2moi/', '_blank', 'noopener,noreferrer');
         }
@@ -771,6 +1029,7 @@
         function removeFromInventory(index) {
             if (confirm('Supprimer cet aliment de l\'inventaire ?')) {
                 inventory.splice(index, 1);
+                saveToLocalStorage(); // Sauvegarder après suppression
                 displayInventory();
             }
         }
@@ -778,6 +1037,7 @@
         function removeRecipe(index) {
             if (confirm('Supprimer cette recette ?')) {
                 recipes.splice(index, 1);
+                saveToLocalStorage(); // Sauvegarder après suppression
                 displayRecipes();
             }
         }
@@ -844,6 +1104,9 @@
                 dinner: dinner || 'Non défini'
             };
 
+            // Sauvegarder automatiquement
+            saveToLocalStorage();
+
             // Rafraîchir l'affichage du tableau
             displayPlanning();
 
@@ -867,9 +1130,17 @@
                     instructions: instructions
                 });
 
+                // Sauvegarder automatiquement
+                saveToLocalStorage();
+
                 alert(`Recette "${name}" ajoutée avec succès !`);
                 document.getElementById('recipe-form').reset();
                 closeModal('recipe-modal');
+                
+                // Rafraîchir l'affichage si on est dans la section recettes
+                if (document.getElementById('section-recipes').classList.contains('active')) {
+                    displayRecipes();
+                }
             } else {
                 alert('Veuillez remplir tous les champs obligatoires.');
             }
@@ -891,10 +1162,18 @@
                     category: category
                 });
 
+                // Sauvegarder automatiquement
+                saveToLocalStorage();
+
                 alert(`"${name}" ajouté à l'inventaire !`);
                 document.getElementById('inventory-form').reset();
                 closeModal('inventory-modal');
                 updatePriorityDisplay();
+                
+                // Rafraîchir l'affichage si on est dans la section inventaire
+                if (document.getElementById('section-inventory').classList.contains('active')) {
+                    displayInventory();
+                }
             } else {
                 alert('Veuillez remplir tous les champs obligatoires.');
             }
@@ -942,10 +1221,21 @@
             }
         }
 
-        // Initialisation - Afficher le planning au chargement
+        // Initialisation - Charger les données et afficher le planning au chargement
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Application de gestion de repas chargée !');
+            console.log('🚀 Application de gestion de repas en cours de chargement...');
+            
+            // Charger les données sauvegardées
+            const dataLoaded = loadFromLocalStorage();
+            
+            // Afficher le planning initial
             displayPlanning();
+            
+            if (dataLoaded) {
+                console.log('✅ Application chargée avec vos données personnalisées !');
+            } else {
+                console.log('🆕 Application initialisée avec les données par défaut.');
+            }
         });
     </script>
 </body>
